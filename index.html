@@ -208,7 +208,8 @@ select.col-select{flex:1;background:var(--bg);border:1.5px solid var(--border);b
         <div><strong id="stat-picked">0</strong> / <span id="stat-total">0</span> picked</div>
         <div id="stat-elapsed"></div>
       </div>
-      <button class="topbar-btn" onclick="confirmNewSession()">New Session</button>
+      <button class="topbar-btn" id="btn-connect-printer" onclick="connectPrinter()" style="background:rgba(255,100,0,.35);border-color:rgba(255,150,0,.5)">🖨 Connect</button>
+      <button class="topbar-btn" onclick="confirmNewSession()">New</button>
     </div>
   </div>
   <div class="queue-subheader">
@@ -234,6 +235,7 @@ select.col-select{flex:1;background:var(--bg);border:1.5px solid var(--border);b
       <div class="topbar-stat">
         <div><strong id="ps-picked">0</strong> / <span id="ps-total">0</span></div>
       </div>
+      <button class="topbar-btn" id="btn-connect-printer2" onclick="connectPrinter()" style="background:rgba(255,100,0,.35);border-color:rgba(255,150,0,.5)">🖨 Connect</button>
     </div>
   </div>
   <div class="pick-nav">
@@ -550,15 +552,81 @@ function executePrint(){
   else{showDoneScreen();}
 }
 
-function sendToPrinter(o){
-  var zpl=buildZPL(o);
-  // Send via Zebra PrintConnect intent (works with BT paired via Android Settings)
-  // PrintConnect listens for zpl:// URLs and sends to last-used printer automatically
-  try{
-    window.location.href='zpl://'+encodeURIComponent(zpl);
-  }catch(err){
-    toast('Print error: '+err.message);
+// ── WEB BLUETOOTH PRINTING ──
+// ZQ521 BLE service/characteristic UUIDs (Zebra standard)
+var ZQ521_SERVICE  = '38eb4a80-c570-11e3-9507-0002a5d5c51b';
+var ZQ521_WRITE    = '38eb4a82-c570-11e3-9507-0002a5d5c51b';
+var _btDevice = null;
+var _btChar   = null;
+
+function connectPrinter(){
+  if(!navigator.bluetooth){
+    toast('Bluetooth not available in this browser');
+    return;
   }
+  navigator.bluetooth.requestDevice({
+    filters:[{services:[ZQ521_SERVICE]}],
+    optionalServices:[ZQ521_SERVICE]
+  })
+  .then(function(device){
+    _btDevice = device;
+    _btDevice.addEventListener('gattserverdisconnected', onBtDisconnected);
+    return device.gatt.connect();
+  })
+  .then(function(server){
+    return server.getPrimaryService(ZQ521_SERVICE);
+  })
+  .then(function(service){
+    return service.getCharacteristic(ZQ521_WRITE);
+  })
+  .then(function(char){
+    _btChar = char;
+    setPrinterConnected(true);
+    toast('✓ Printer connected');
+  })
+  .catch(function(err){
+    if(err.name !== 'NotFoundError') toast('Connect failed: '+err.message);
+  });
+}
+
+function onBtDisconnected(){
+  _btChar = null;
+  setPrinterConnected(false);
+  toast('Printer disconnected');
+}
+
+function setPrinterConnected(on){
+  var b1 = document.getElementById('btn-connect-printer');
+  var b2 = document.getElementById('btn-connect-printer2');
+  var style = on
+    ? 'background:rgba(0,180,0,.35);border-color:rgba(0,220,0,.5)'
+    : 'background:rgba(255,100,0,.35);border-color:rgba(255,150,0,.5)';
+  var label = on ? '🖨 Connected' : '🖨 Connect';
+  if(b1){ b1.style.cssText += ';' + style; b1.textContent = label; }
+  if(b2){ b2.style.cssText += ';' + style; b2.textContent = label; }
+}
+
+function sendToPrinter(o){
+  var zpl = buildZPL(o);
+  if(!_btChar){
+    toast('Tap Connect Printer first');
+    return;
+  }
+  // Send ZPL in 512-byte chunks with 30ms delay (Android BLE requirement)
+  var enc  = new TextEncoder();
+  var data = enc.encode(zpl);
+  var CHUNK = 512;
+  function sendChunk(i){
+    if(i >= data.length) return;
+    _btChar.writeValueWithoutResponse(data.slice(i, i + CHUNK))
+      .then(function(){ setTimeout(function(){ sendChunk(i + CHUNK); }, 30); })
+      .catch(function(err){
+        toast('Print error: ' + err.message);
+        _btChar = null;
+        setPrinterConnected(false);
+      });
+  }
+  sendChunk(0);
 }
 
 function buildZPL(o){
