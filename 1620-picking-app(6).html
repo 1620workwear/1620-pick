@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>1620 Pick</title>
+<style>
+:root{
+  --bg:#F7F5F0;--surface:#FFFFFF;--border:#DDD9D0;--border2:#C8C4BB;
+  --accent:#1C3A2B;--accent2:#2D5A40;
+  --green:#15803D;--green-light:#DCFCE7;--green-border:#86EFAC;
+  --red:#DC2626;--amber:#FEF3C7;--amber-border:#FCD34D;
+  --text:#1A1A1A;--text2:#6B6760;--text3:#9D9892;
+  --mono:'Courier New',Courier,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);}
+
+/* SCREEN SYSTEM — no position:fixed anywhere */
+.screen{
+  display:none;
+  flex-direction:column;
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  overflow:hidden;
+  background:var(--bg);
+}
+.screen.active{display:flex;}
+
+/* TOPBAR */
+.topbar{
+  background:var(--accent);padding:0 16px;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.topbar-logo{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;color:rgba(255,255,255,.9);text-transform:uppercase;}
+.topbar-logo em{color:rgba(255,255,255,.4);font-style:normal;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-stat{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.55);text-align:right;line-height:1.5;}
+.topbar-stat strong{color:#fff;font-size:12px;}
+.topbar-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:7px;padding:7px 13px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;}
+.topbar-btn:active{background:rgba(255,255,255,.25);}
+
+/* ── SCREEN 1: UPLOAD ── */
+#screen-upload{overflow-y:auto;}
+.upload-scroll{display:flex;flex-direction:column;align-items:center;padding:28px 18px 48px;gap:22px;min-height:100%;}
+.upload-title{font-size:26px;font-weight:700;color:var(--accent);text-align:center;line-height:1.2;}
+.upload-card{background:var(--surface);border-radius:16px;padding:22px 18px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 16px rgba(0,0,0,.08);}
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;position:relative;background:var(--bg);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone-icon{font-size:38px;margin-bottom:8px;}
+.upload-zone-label{font-size:16px;font-weight:600;margin-bottom:4px;}
+.upload-zone-sub{font-size:12px;color:var(--text3);line-height:1.7;}
+.upload-preview{background:var(--green-light);border:1px solid var(--green-border);border-radius:10px;padding:12px 14px;display:none;}
+.upload-preview.visible{display:block;}
+.upload-preview-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.upload-preview-name{font-weight:600;color:var(--green);font-size:13px;}
+.upload-preview-count{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);}
+.upload-preview-cols{font-family:var(--mono);font-size:10px;color:#166534;}
+.col-map{display:flex;flex-direction:column;gap:8px;}
+.col-map-title{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;}
+.col-map-row{display:flex;align-items:center;gap:8px;}
+.col-map-field{font-size:13px;font-weight:600;color:var(--text);width:80px;flex-shrink:0;}
+.col-map-field span{color:var(--red);}
+select.col-select{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-family:var(--sans);font-size:14px;color:var(--text);}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:18px;font-family:var(--sans);font-size:17px;font-weight:700;cursor:pointer;width:100%;}
+.btn-primary:active{background:var(--accent2);}
+.btn-primary:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;}
+
+/* ── SCREEN 2: QUEUE ── */
+.queue-subheader{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;flex-shrink:0;}
+.progress-bar-wrap{background:var(--bg);border-radius:100px;height:5px;overflow:hidden;margin-bottom:5px;}
+.progress-bar-fill{background:var(--green);height:100%;border-radius:100px;transition:width .4s;}
+.progress-label{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.progress-label strong{color:var(--text);}
+.filter-tabs{display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.filter-tab{flex:1;padding:8px 4px;border:1.5px solid var(--border);border-radius:8px;background:transparent;font-family:var(--sans);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;text-align:center;}
+.filter-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.search-wrap{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface);}
+.search-input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 13px;font-family:var(--sans);font-size:14px;color:var(--text);}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.queue-list{flex:1;overflow-y:auto;padding:8px 12px;-webkit-overflow-scrolling:touch;}
+.queue-item{
+  border-radius:10px;padding:14px 14px;margin-bottom:6px;
+  cursor:pointer;border:1.5px solid transparent;
+  background:var(--surface);
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.queue-item:active{background:rgba(28,58,43,.06);border-color:var(--accent);}
+.queue-item.picked{background:var(--green-light);border-color:var(--green-border);cursor:default;}
+.queue-item-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.queue-item-order{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-dot.pending{background:var(--border2);}
+.status-dot.picked{background:var(--green);}
+.queue-item-style{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.queue-item-details{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.queue-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;}
+
+/* ── SCREEN 3: PICK DETAIL ── */
+.pick-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.back-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:9px 15px;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;}
+.back-btn:active{background:var(--border);}
+.pick-nav-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;}
+.pick-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.pick-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px;}
+.pick-order-num{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);margin-bottom:2px;}
+.pick-style-name{font-size:20px;font-weight:700;color:var(--text);}
+.pick-specs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+.pick-spec{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:4px;}
+.spec-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;}
+.spec-value{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.spec-value.big{font-size:54px;color:var(--accent);}
+.spec-sub{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.pick-location{background:var(--amber);border-bottom:1px solid var(--amber-border);padding:12px 18px;display:flex;align-items:center;gap:10px;}
+.pick-location-text{font-family:var(--mono);font-size:13px;color:#92400E;}
+.pick-location-text strong{font-size:14px;color:#78350F;}
+.pick-actions{padding:18px 14px;display:flex;flex-direction:column;gap:12px;align-items:center;}
+.scan-box{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:18px 14px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.scan-hint{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;text-align:center;margin-bottom:12px;}
+.scan-input{width:100%;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:16px 14px;font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);text-align:center;letter-spacing:.06em;margin-bottom:8px;}
+.scan-input:focus{outline:none;border-color:var(--accent);}
+.scan-input.error{border-color:var(--red);}
+.scan-error{font-size:13px;color:var(--red);font-weight:600;min-height:18px;text-align:center;margin-bottom:8px;}
+.or-div{text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3);margin:4px 0 12px;}
+.btn-confirm{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:20px;font-family:var(--sans);font-size:19px;font-weight:700;cursor:pointer;width:100%;}
+.btn-confirm:active{background:var(--accent2);}
+.btn-skip{background:transparent;color:var(--text2);border:1.5px solid var(--border);border-radius:10px;padding:14px;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;width:100%;max-width:400px;}
+.btn-skip:active{background:var(--border);}
+
+/* ── SCREEN 4: CONFIRM/PRINT ── */
+#screen-confirm{overflow-y:auto;}
+.confirm-scroll{display:flex;flex-direction:column;align-items:center;padding:28px 18px 48px;gap:18px;}
+.confirm-title{font-size:22px;font-weight:700;color:var(--text);}
+.confirm-sub{font-size:14px;color:var(--text2);text-align:center;margin-top:-10px;}
+.label-preview{width:100%;max-width:360px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:20px 22px;font-family:var(--mono);display:flex;flex-direction:column;gap:6px;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+.lbl-order{font-size:11px;color:var(--text3);}
+.lbl-style{font-size:17px;font-weight:700;color:var(--text);}
+.lbl-meta{font-size:12px;color:var(--text2);}
+.lbl-inseam{font-size:38px;font-weight:900;color:var(--accent);margin-top:4px;}
+.confirm-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px;}
+.btn-print{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:20px;font-family:var(--sans);font-size:18px;font-weight:700;cursor:pointer;width:100%;}
+.btn-print:active{background:var(--accent2);}
+.btn-back{background:var(--bg);color:var(--text2);border:1.5px solid var(--border);border-radius:10px;padding:14px;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;width:100%;}
+
+/* ── SCREEN 5: DONE ── */
+#screen-done{overflow-y:auto;align-items:center;justify-content:center;}
+.done-inner{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:48px 28px;}
+.done-icon{font-size:72px;}
+.done-title{font-size:34px;font-weight:700;color:var(--accent);}
+.done-sub{font-size:16px;color:var(--text2);max-width:300px;}
+.done-stats{display:flex;gap:24px;background:var(--surface);border-radius:14px;padding:20px 28px;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+.done-stat-val{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--accent);}
+.done-stat-label{font-size:12px;color:var(--text2);margin-top:2px;}
+.btn-outline{background:transparent;color:var(--accent);border:2px solid var(--accent);border-radius:12px;padding:15px 34px;font-family:var(--sans);font-size:16px;font-weight:700;cursor:pointer;}
+.btn-outline:active{background:var(--accent);color:#fff;}
+
+/* TOAST — only thing using fixed, and it's decorative only so OK if it doesn't show on content:// */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--accent);color:#fff;padding:12px 22px;border-radius:100px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: UPLOAD ═══ -->
+<div class="screen active" id="screen-upload">
+  <div class="topbar">
+    <div class="topbar-logo">1620 <em>/ PICK SYSTEM</em></div>
+  </div>
+  <div class="upload-scroll">
+    <div class="upload-title">Load Today's<br>Order Queue</div>
+    <div class="upload-card">
+      <div class="upload-zone">
+        <input type="file" id="csv-file-input">
+        <div class="upload-zone-icon">📂</div>
+        <div class="upload-zone-label">Tap to select file</div>
+        <div class="upload-zone-sub">CSV from daily order report</div>
+      </div>
+      <div class="upload-preview" id="upload-preview">
+        <div class="upload-preview-top">
+          <div class="upload-preview-name" id="preview-name"></div>
+          <div class="upload-preview-count" id="preview-count"></div>
+        </div>
+        <div class="upload-preview-cols" id="preview-cols"></div>
+      </div>
+      <div class="col-map" id="col-map" style="display:none">
+        <div class="col-map-title">Column mapping — auto-detected</div>
+        <div class="col-map-row"><div class="col-map-field">Order # <span>*</span></div><select class="col-select" id="map-order" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Style <span>*</span></div><select class="col-select" id="map-style-name" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Style # <span>*</span></div><select class="col-select" id="map-style-num" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Color <span>*</span></div><select class="col-select" id="map-color" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Waist <span>*</span></div><select class="col-select" id="map-waist" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Inseam <span>*</span></div><select class="col-select" id="map-inseam" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Barcode</div><select class="col-select" id="map-barcode" onchange="checkReady()"></select></div>
+      </div>
+      <button class="btn-primary" id="btn-start" disabled onclick="startSession()">Start Picking Session →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: QUEUE ═══ -->
+<div class="screen" id="screen-queue">
+  <div class="topbar">
+    <div class="topbar-logo">1620 <em>/ QUEUE</em></div>
+    <div class="topbar-right">
+      <div class="topbar-stat" id="topbar-stats" style="display:none">
+        <div><strong id="stat-picked">0</strong> / <span id="stat-total">0</span> picked</div>
+        <div id="stat-elapsed"></div>
+      </div>
+      <button class="topbar-btn" onclick="confirmNewSession()">New Session</button>
+    </div>
+  </div>
+  <div class="queue-subheader">
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label"><strong id="pl-picked">0</strong> of <strong id="pl-total">0</strong> picked &nbsp;·&nbsp; <span id="sidebar-date"></span></div>
+  </div>
+  <div class="filter-tabs">
+    <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-tab" onclick="setFilter('pending',this)">Pending</button>
+    <button class="filter-tab" onclick="setFilter('picked',this)">Picked</button>
+  </div>
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="search-input" placeholder="Search order # or style..." oninput="renderQueue()">
+  </div>
+  <div class="queue-list" id="queue-list"></div>
+</div>
+
+<!-- ═══ SCREEN 3: PICK DETAIL ═══ -->
+<div class="screen" id="screen-pick">
+  <div class="topbar">
+    <div class="topbar-logo">1620 <em>/ PICKING</em></div>
+    <div class="topbar-right">
+      <div class="topbar-stat">
+        <div><strong id="ps-picked">0</strong> / <span id="ps-total">0</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="pick-nav">
+    <button class="back-btn" onclick="goBackToQueue()">← Queue</button>
+    <div class="pick-nav-label">Now Picking</div>
+    <div style="width:80px"></div>
+  </div>
+  <div class="pick-scroll">
+    <div class="pick-header">
+      <div class="pick-order-num" id="pick-order-num">ORDER</div>
+      <div class="pick-style-name" id="pick-style-name">—</div>
+    </div>
+    <div class="pick-specs">
+      <div class="pick-spec"><div class="spec-label">Style #</div><div class="spec-value" id="pick-style-num" style="font-size:17px">—</div></div>
+      <div class="pick-spec"><div class="spec-label">Color</div><div class="spec-value" id="pick-color" style="font-size:17px">—</div></div>
+      <div class="pick-spec"><div class="spec-label">Waist</div><div class="spec-value" id="pick-waist">—</div><div class="spec-sub">inches</div></div>
+      <div class="pick-spec"><div class="spec-label">Hem To</div><div class="spec-value big" id="pick-inseam">—</div><div class="spec-sub">inches</div></div>
+    </div>
+    <div class="pick-location">
+      <div>📍</div>
+      <div class="pick-location-text">Go to: <strong id="pick-location">—</strong></div>
+    </div>
+    <div class="pick-actions">
+      <div class="scan-box">
+        <div class="scan-hint">Scan shelf barcode to confirm</div>
+        <input type="text" class="scan-input" id="scan-input" placeholder="Scan here..." inputmode="none" autocomplete="off" onkeydown="handleScanKey(event)">
+        <div class="scan-error" id="scan-error"></div>
+        <div class="or-div">— or —</div>
+        <button class="btn-confirm" onclick="openConfirm()">✓ Confirm Pick &amp; Print Tag</button>
+      </div>
+      <button class="btn-skip" onclick="skipOrder()">↓ Skip — come back later</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: CONFIRM / PRINT ═══ -->
+<div class="screen" id="screen-confirm">
+  <div class="topbar">
+    <div class="topbar-logo">1620 <em>/ CONFIRM</em></div>
+  </div>
+  <div class="confirm-scroll">
+    <div class="confirm-title">🏷 Review Hangtag</div>
+    <div class="confirm-sub">Confirm details before printing</div>
+    <div class="label-preview">
+      <div class="lbl-order" id="lbl-order"></div>
+      <div class="lbl-style" id="lbl-style"></div>
+      <div class="lbl-meta" id="lbl-meta"></div>
+      <div class="lbl-inseam" id="lbl-inseam"></div>
+    </div>
+    <div class="confirm-btns">
+      <button class="btn-print" onclick="executePrint()">🖨 Print &amp; Mark Picked</button>
+      <button class="btn-back" onclick="showScreen('screen-pick')">← Back to Pick</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 5: DONE ═══ -->
+<div class="screen" id="screen-done">
+  <div class="topbar">
+    <div class="topbar-logo">1620 <em>/ DONE</em></div>
+  </div>
+  <div class="done-inner">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">Queue Complete</div>
+    <div class="done-sub">All orders picked and tagged.</div>
+    <div class="done-stats">
+      <div class="done-stat"><div class="done-stat-val" id="done-picked">0</div><div class="done-stat-label">Picked</div></div>
+      <div class="done-stat"><div class="done-stat-val" id="done-skipped">0</div><div class="done-stat-label">Skipped</div></div>
+      <div class="done-stat"><div class="done-stat-val" id="done-time">0m</div><div class="done-stat-label">Time</div></div>
+    </div>
+    <button class="btn-outline" onclick="confirmNewSession()">Load New Session</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+
+<script>
+var orders=[],colMap={},rawRows=[],csvHeaders=[];
+var currentId=null,currentFilter='all',sessionStart=null;
+
+// ── CSV ──
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  var lines=text.trim().split(/\r?\n/);
+  if(lines.length<2)return{headers:[],rows:[]};
+  var headers=splitRow(lines[0]);
+  var rows=lines.slice(1).filter(function(l){return l.trim();}).map(function(l){
+    var vals=splitRow(l),obj={};
+    headers.forEach(function(h,i){obj[h]=(vals[i]||'').trim();});
+    return obj;
+  });
+  return{headers:headers,rows:rows};
+}
+function splitRow(row){
+  var result=[],cur='',inQ=false;
+  for(var i=0;i<row.length;i++){
+    var c=row[i];
+    if(c==='"'){inQ=!inQ;continue;}
+    if(c===','&&!inQ){result.push(cur.trim());cur='';continue;}
+    cur+=c;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+document.getElementById('csv-file-input').addEventListener('change',function(e){
+  if(e.target.files[0])handleFile(e.target.files[0]);
+});
+
+function handleFile(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var parsed=parseCSV(e.target.result);
+    csvHeaders=parsed.headers;rawRows=parsed.rows;
+    document.getElementById('preview-name').textContent=file.name;
+    document.getElementById('preview-count').textContent=parsed.rows.length+' orders';
+    document.getElementById('preview-cols').textContent='Cols: '+parsed.headers.join(' · ');
+    document.getElementById('upload-preview').classList.add('visible');
+    buildColMap(parsed.headers);
+    checkReady();
+  };
+  reader.readAsText(file);
+}
+
+// ── COLUMN MAPPING ──
+var ALIASES={
+  'map-order':     ['order_number','order_no','ordernumber','order','name'],
+  'map-style-name':['product_name','style_name','product name','style name','product','item','title'],
+  'map-style-num': ['sku','style_number','style_no','style number','style#'],
+  'map-color':     ['variant_name','variant name','color','colour','option1'],
+  'map-waist':     ['variant_name','variant name','waist','size','option2'],
+  'map-inseam':    ['inseam','hem','inseam_length','hem_length','option3'],
+  'map-barcode':   ['barcode','upc','barcode_number']
+};
+
+function buildColMap(headers){
+  Object.keys(ALIASES).forEach(function(id){
+    var sel=document.getElementById(id);
+    sel.innerHTML=id==='map-barcode'?'<option value="">-- none --</option>':'<option value="">-- select --</option>';
+    headers.forEach(function(h){
+      var opt=document.createElement('option');opt.value=h;opt.textContent=h;sel.appendChild(opt);
+    });
+    var aliases=ALIASES[id];
+    // Exact match first
+    var match=headers.find(function(h){
+      return aliases.some(function(a){return h.toLowerCase().replace(/[\s_]/g,'')=== a.replace(/[\s_]/g,'');});
+    });
+    // Partial match fallback
+    if(!match)match=headers.find(function(h){
+      return aliases.some(function(a){return h.toLowerCase().replace(/[\s_]/g,'').indexOf(a.replace(/[\s_]/g,''))>=0;});
+    });
+    if(match)sel.value=match;
+  });
+  document.getElementById('col-map').style.display='flex';
+}
+
+function checkReady(){
+  var req=['map-order','map-style-name','map-style-num','map-color','map-waist','map-inseam'];
+  var ok=rawRows.length>0&&req.every(function(id){return document.getElementById(id).value;});
+  document.getElementById('btn-start').disabled=!ok;
+}
+
+function resolveColorWaist(row){
+  var cc=colMap.color,wc=colMap.waist;
+  var cv=row[cc]||'',wv=row[wc]||'';
+  if(cc===wc&&cv.indexOf(' / ')>=0){
+    var parts=cv.split(' / ');
+    wv=parts[parts.length-1].trim();
+    cv=parts.slice(0,parts.length-1).join(' / ').trim();
+  }
+  return{color:cv||'-',waist:wv||'-'};
+}
+
+// ── START SESSION ──
+function startSession(){
+  colMap={
+    order:    document.getElementById('map-order').value,
+    styleName:document.getElementById('map-style-name').value,
+    styleNum: document.getElementById('map-style-num').value,
+    color:    document.getElementById('map-color').value,
+    waist:    document.getElementById('map-waist').value,
+    inseam:   document.getElementById('map-inseam').value,
+    barcode:  document.getElementById('map-barcode').value
+  };
+  orders=rawRows.map(function(row,i){
+    var cw=resolveColorWaist(row);
+    return{
+      id:i,
+      order:    row[colMap.order]||('ORD-'+(i+1)),
+      styleName:row[colMap.styleName]||'-',
+      styleNum: row[colMap.styleNum]||'-',
+      color:    cw.color,
+      waist:    cw.waist,
+      inseam:   row[colMap.inseam]||'-',
+      barcode:  colMap.barcode?(row[colMap.barcode]||''):'',
+      status:   'pending'
+    };
+  }).sort(function(a,b){
+    if(a.styleName!==b.styleName)return a.styleName.localeCompare(b.styleName);
+    if(a.color!==b.color)return a.color.localeCompare(b.color);
+    return(parseInt(a.waist)||0)-(parseInt(b.waist)||0);
+  });
+  sessionStart=Date.now();
+  document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  renderQueue();updateProgress();updateTopbar();
+  showScreen('screen-queue');
+}
+
+// ── QUEUE ──
+function renderQueue(){
+  var list=document.getElementById('queue-list');
+  var search=document.getElementById('search-input').value.toLowerCase();
+  var filtered=orders.filter(function(o){
+    if(currentFilter==='pending'&&o.status!=='pending')return false;
+    if(currentFilter==='picked'&&o.status!=='picked')return false;
+    if(search)return o.order.toLowerCase().indexOf(search)>=0
+      ||o.styleName.toLowerCase().indexOf(search)>=0
+      ||o.color.toLowerCase().indexOf(search)>=0;
+    return true;
+  });
+  if(!filtered.length){list.innerHTML='<div class="queue-empty">No orders match</div>';return;}
+  list.innerHTML=filtered.map(function(o){
+    var picked=o.status==='picked';
+    return '<div class="queue-item'+(picked?' picked':'')+'"'
+      +(!picked?' onclick="openOrder('+o.id+')"':'')+'>'
+      +'<div class="queue-item-top">'
+      +'<div class="queue-item-order">'+o.order+'</div>'
+      +'<div class="status-dot '+o.status+'"></div>'
+      +'</div>'
+      +'<div class="queue-item-style">'+o.styleName+'</div>'
+      +'<div class="queue-item-details">'+o.color+' · W'+o.waist+' · '+o.inseam+'"</div>'
+      +'</div>';
+  }).join('');
+}
+
+function setFilter(f,el){
+  currentFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');renderQueue();
+}
+
+// ── OPEN ORDER → full screen swap ──
+function openOrder(id){
+  var o=orders.find(function(o){return o.id===id;});
+  if(!o||o.status==='picked')return;
+  currentId=id;
+  document.getElementById('pick-order-num').textContent='ORDER '+o.order;
+  document.getElementById('pick-style-name').textContent=o.styleName;
+  document.getElementById('pick-style-num').textContent=o.styleNum;
+  document.getElementById('pick-color').textContent=o.color;
+  document.getElementById('pick-waist').textContent=o.waist;
+  document.getElementById('pick-inseam').textContent=o.inseam+'"';
+  document.getElementById('pick-location').textContent=o.styleName+' / '+o.color+' / W'+o.waist;
+  var picked=orders.filter(function(x){return x.status==='picked';}).length;
+  document.getElementById('ps-picked').textContent=picked;
+  document.getElementById('ps-total').textContent=orders.length;
+  var si=document.getElementById('scan-input');
+  si.value='';si.className='scan-input';
+  document.getElementById('scan-error').textContent='';
+  // Scroll pick body to top
+  var ps=document.getElementById('screen-pick').querySelector('.pick-scroll');
+  if(ps)ps.scrollTop=0;
+  showScreen('screen-pick');
+  setTimeout(function(){si.focus();},200);
+}
+
+function goBackToQueue(){
+  currentId=null;
+  renderQueue();
+  showScreen('screen-queue');
+}
+
+// ── SCAN ──
+function handleScanKey(e){if(e.key==='Enter'){e.preventDefault();validateScan();}}
+function validateScan(){
+  var o=orders.find(function(o){return o.id===currentId;});
+  if(!o)return;
+  var val=document.getElementById('scan-input').value.trim();
+  if(!val)return;
+  if(o.barcode&&o.barcode!==''){
+    if(val===o.barcode){openConfirm();}
+    else{
+      var el=document.getElementById('scan-input');
+      el.className='scan-input error';
+      document.getElementById('scan-error').textContent='Barcode mismatch — try again';
+      setTimeout(function(){el.className='scan-input';el.value='';},1400);
+    }
+  }else{openConfirm();}
+}
+
+// ── CONFIRM SCREEN ──
+function openConfirm(){
+  var o=orders.find(function(o){return o.id===currentId;});
+  if(!o)return;
+  document.getElementById('lbl-order').textContent='Order '+o.order;
+  document.getElementById('lbl-style').textContent=o.styleName;
+  document.getElementById('lbl-meta').textContent=o.styleNum+' / '+o.color+' / W'+o.waist;
+  document.getElementById('lbl-inseam').textContent='HEM TO: '+o.inseam+'"';
+  showScreen('screen-confirm');
+}
+
+// ── PRINT + MARK PICKED ──
+function executePrint(){
+  var o=orders.find(function(o){return o.id===currentId;});
+  if(!o)return;
+  sendToPrinter(o);
+  o.status='picked';
+  updateProgress();updateTopbar();
+  toast('✓ Picked: '+o.order);
+  var next=orders.find(function(x){return x.status==='pending';});
+  if(next){openOrder(next.id);}
+  else{showDoneScreen();}
+}
+
+function sendToPrinter(o){
+  var zpl=buildZPL(o);
+  // Send via Zebra PrintConnect intent (works with BT paired via Android Settings)
+  // PrintConnect listens for zpl:// URLs and sends to last-used printer automatically
+  try{
+    window.location.href='zpl://'+encodeURIComponent(zpl);
+  }catch(err){
+    toast('Print error: '+err.message);
+  }
+}
+
+function buildZPL(o){
+  return '^XA^PW600^LL1200'
+    +'^CF0,30^FO30,30^FD1620 WORKWEAR^FS'
+    +'^CF0,22^FO30,68^FDOrder Finishing Tag^FS'
+    +'^FO30,100^GB540,2,2^FS'
+    +'^CF0,22^FO30,115^FDOrder:^FS^FO200,115^FD'+o.order+'^FS'
+    +'^CF0,22^FO30,150^FDStyle:^FS^FO200,150^FD'+o.styleName+'^FS'
+    +'^CF0,22^FO30,185^FDStyle#:^FS^FO200,185^FD'+o.styleNum+'^FS'
+    +'^CF0,22^FO30,220^FDColor:^FS^FO200,220^FD'+o.color+'^FS'
+    +'^CF0,22^FO30,255^FDWaist:^FS^FO200,255^FD'+o.waist+'"^FS'
+    +'^FO30,292^GB540,2,2^FS'
+    +'^CF0,28^FO30,308^FDINSEAM — HEM TO:^FS'
+    +'^CF0,100^FO30,345^FD'+o.inseam+'"^FS'
+    +'^FO30,460^GB540,2,2^FS'
+    +'^BY2^FO30,475^BCN,80,Y,N,N^FD'+o.order+'^FS'
+    +'^XZ';
+}
+
+// ── SKIP ──
+function skipOrder(){
+  var o=orders.find(function(o){return o.id===currentId;});
+  if(!o)return;
+  orders=orders.filter(function(x){return x.id!==o.id;}).concat([o]);
+  toast('Skipped — moved to end');
+  var next=orders.find(function(x){return x.status==='pending'&&x.id!==o.id;});
+  if(next){openOrder(next.id);}else{goBackToQueue();}
+}
+
+// ── DONE ──
+function showDoneScreen(){
+  var picked=orders.filter(function(o){return o.status==='picked';}).length;
+  var skipped=orders.filter(function(o){return o.status==='pending';}).length;
+  var elapsed=sessionStart?Math.floor((Date.now()-sessionStart)/60000):0;
+  document.getElementById('done-picked').textContent=picked;
+  document.getElementById('done-skipped').textContent=skipped;
+  document.getElementById('done-time').textContent=elapsed+'m';
+  showScreen('screen-done');
+}
+
+// ── PROGRESS ──
+function updateProgress(){
+  var total=orders.length,picked=orders.filter(function(o){return o.status==='picked';}).length;
+  document.getElementById('progress-fill').style.width=(total?(picked/total)*100:0)+'%';
+  document.getElementById('pl-picked').textContent=picked;
+  document.getElementById('pl-total').textContent=total;
+}
+function updateTopbar(){
+  var picked=orders.filter(function(o){return o.status==='picked';}).length;
+  document.getElementById('stat-picked').textContent=picked;
+  document.getElementById('stat-total').textContent=orders.length;
+  var e=sessionStart?Math.floor((Date.now()-sessionStart)/60000):0;
+  document.getElementById('stat-elapsed').textContent=e+'m';
+  document.getElementById('topbar-stats').style.display='block';
+}
+
+// ── SCREEN SWITCH (no fixed, no z-index battles) ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+}
+
+// ── NEW SESSION ──
+function confirmNewSession(){
+  if(!confirm('Start a new session? Current progress will be cleared.'))return;
+  orders=[];rawRows=[];csvHeaders=[];currentId=null;sessionStart=null;currentFilter='all';
+  document.getElementById('upload-preview').classList.remove('visible');
+  document.getElementById('col-map').style.display='none';
+  document.getElementById('btn-start').disabled=true;
+  document.getElementById('csv-file-input').value='';
+  document.getElementById('search-input').value='';
+  document.querySelectorAll('.filter-tab').forEach(function(t,i){t.classList.toggle('active',i===0);});
+  showScreen('screen-upload');
+}
+
+// ── TOAST ──
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2400);
+}
+
+setInterval(function(){
+  if(sessionStart&&document.getElementById('screen-queue').classList.contains('active'))updateTopbar();
+},30000);
+</script>
+</body>
+</html>
