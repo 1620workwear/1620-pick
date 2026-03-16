@@ -193,6 +193,8 @@ select.col-select{flex:1;background:var(--bg);border:1.5px solid var(--border);b
         <div class="col-map-row"><div class="col-map-field">Waist <span>*</span></div><select class="col-select" id="map-waist" onchange="checkReady()"></select></div>
         <div class="col-map-row"><div class="col-map-field">Inseam <span>*</span></div><select class="col-select" id="map-inseam" onchange="checkReady()"></select></div>
         <div class="col-map-row"><div class="col-map-field">Barcode</div><select class="col-select" id="map-barcode" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Customer</div><select class="col-select" id="map-customer" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Order Date</div><select class="col-select" id="map-order-date" onchange="checkReady()"></select></div>
       </div>
       <button class="btn-primary" id="btn-start" disabled onclick="startSession()">Start Picking Session →</button>
     </div>
@@ -364,13 +366,15 @@ function handleFile(file){
 
 // ── COLUMN MAPPING ──
 var ALIASES={
-  'map-order':     ['order_number','order_no','ordernumber','order','name'],
-  'map-style-name':['product_name','style_name','product name','style name','product','item','title'],
-  'map-style-num': ['sku','style_number','style_no','style number','style#'],
-  'map-color':     ['variant_name','variant name','color','colour','option1'],
-  'map-waist':     ['variant_name','variant name','waist','size','option2'],
-  'map-inseam':    ['inseam','hem','inseam_length','hem_length','option3'],
-  'map-barcode':   ['barcode','upc','barcode_number']
+  'map-order':       ['order_number','order_no','ordernumber','order','name'],
+  'map-style-name':  ['product_name','style_name','product name','style name','product','item','title'],
+  'map-style-num':   ['sku','style_number','style_no','style number','style#'],
+  'map-color':       ['variant_name','variant name','color','colour','option1'],
+  'map-waist':       ['variant_name','variant name','waist','size','option2'],
+  'map-inseam':      ['inseam','hem','inseam_length','hem_length','option3'],
+  'map-barcode':     ['barcode','upc','barcode_number'],
+  'map-customer':    ['customer_name','customer','ship_to','shipping_name','recipient','billing_name'],
+  'map-order-date':  ['order_date','date','order date','created_at','created at','ordered_at']
 };
 
 function buildColMap(headers){
@@ -414,26 +418,30 @@ function resolveColorWaist(row){
 // ── START SESSION ──
 function startSession(){
   colMap={
-    order:    document.getElementById('map-order').value,
-    styleName:document.getElementById('map-style-name').value,
-    styleNum: document.getElementById('map-style-num').value,
-    color:    document.getElementById('map-color').value,
-    waist:    document.getElementById('map-waist').value,
-    inseam:   document.getElementById('map-inseam').value,
-    barcode:  document.getElementById('map-barcode').value
+    order:     document.getElementById('map-order').value,
+    styleName: document.getElementById('map-style-name').value,
+    styleNum:  document.getElementById('map-style-num').value,
+    color:     document.getElementById('map-color').value,
+    waist:     document.getElementById('map-waist').value,
+    inseam:    document.getElementById('map-inseam').value,
+    barcode:   document.getElementById('map-barcode').value,
+    customer:  document.getElementById('map-customer').value,
+    orderDate: document.getElementById('map-order-date').value
   };
   orders=rawRows.map(function(row,i){
     var cw=resolveColorWaist(row);
     return{
       id:i,
-      order:    row[colMap.order]||('ORD-'+(i+1)),
-      styleName:row[colMap.styleName]||'-',
-      styleNum: row[colMap.styleNum]||'-',
-      color:    cw.color,
-      waist:    cw.waist,
-      inseam:   row[colMap.inseam]||'-',
-      barcode:  colMap.barcode?(row[colMap.barcode]||''):'',
-      status:   'pending'
+      order:     row[colMap.order]||('ORD-'+(i+1)),
+      styleName: row[colMap.styleName]||'-',
+      styleNum:  row[colMap.styleNum]||'-',
+      color:     cw.color,
+      waist:     cw.waist,
+      inseam:    row[colMap.inseam]||'-',
+      barcode:   colMap.barcode?(row[colMap.barcode]||''):'',
+      customer:  colMap.customer?(row[colMap.customer]||''):'',
+      orderDate: colMap.orderDate?(row[colMap.orderDate]||''):'',
+      status:    'pending'
     };
   }).sort(function(a,b){
     if(a.styleName!==b.styleName)return a.styleName.localeCompare(b.styleName);
@@ -637,21 +645,59 @@ function sendToPrinter(o){
 }
 
 function buildZPL(o){
-  return '^XA^PW600^LL1200'
-    +'^CF0,30^FO30,30^FD1620 WORKWEAR^FS'
-    +'^CF0,22^FO30,68^FDOrder Finishing Tag^FS'
-    +'^FO30,100^GB540,2,2^FS'
-    +'^CF0,22^FO30,115^FDOrder:^FS^FO200,115^FD'+o.order+'^FS'
-    +'^CF0,22^FO30,150^FDStyle:^FS^FO200,150^FD'+o.styleName+'^FS'
-    +'^CF0,22^FO30,185^FDStyle#:^FS^FO200,185^FD'+o.styleNum+'^FS'
-    +'^CF0,22^FO30,220^FDColor:^FS^FO200,220^FD'+o.color+'^FS'
-    +'^CF0,22^FO30,255^FDWaist:^FS^FO200,255^FD'+o.waist+'"^FS'
-    +'^FO30,292^GB540,2,2^FS'
-    +'^CF0,28^FO30,308^FDINSEAM — HEM TO:^FS'
-    +'^CF0,100^FO30,345^FD'+o.inseam+'"^FS'
-    +'^FO30,460^GB540,2,2^FS'
-    +'^BY2^FO30,475^BCN,80,Y,N,N^FD'+o.order+'^FS'
-    +'^XZ';
+  // 4" x 2" label at 203dpi = 812w x 406h dots
+  // ^FWR rotates all fields 90deg — prints landscape on roll, reads portrait when hung
+  var customerLine = o.customer ? 'Custom Hemmed For: '+o.customer : 'Custom Hemmed Pant';
+  var dateLine     = o.orderDate ? o.orderDate : '';
+  var z = '^XA';
+
+  // Download logo graphic to printer memory (only needed once per session,
+  // but including it each time is safe — printer caches it)
+  z += '~DYE:LOGO.GRF,B,B,1275,15,FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E000000000FC00003F800003F80007E001FF0003FE0007FFF8003FFF8007E00FFF0003FC000FFFFC00FFFFC007E00FFF0003FC001FFFFE01FFFFE007E00FFF0007F8001FFFFF01FFFFF007E00FFF0007F8003FFFFF03FFFFF007E00FFF000FF0003FFFFF03FFFFF007E00FFF000FF0003FFFFF03FFFFF007E00FFF001FF0003FC0FF03FC07F007E000FF001FE0003FC07F03FC07F007E000FF001FE0003FC07F03F807F007E000FF003FC0003FC07F03F807F007E000FF003FC0003FC07F03F807F007E000FF007FC0003FC07F03F807F007E000FF007F80003FC07F03F807F007E000FF007F800000007F03F807F007E000FF00FF000000007F03F807F007E000FF00FF000000007F03F807F007E000FF01FFFF000000FF03F807F007E000FF01FFFFC00001FF03F807F007E000FF03FFFFE00007FF03F807F007E000FF03FFFFF0001FFF03F807F007E000FF03FFFFF0007FFF03F807F007E000FF03FFFFF001FFFE03F807F007E000FF03FFFFF007FFFC03F807F007E000FF03FC0FF00FFFF003F807F007E000FF03FC07F03FFFC003F807F007E000FF03F807F03FFF0003F807F007E000FF03F807F03FFC0003F807F007E000FF03F807F03FF00003F807F007E000FF03F807F03FE00003F807F007E000FF03F807F03FC00003F807F007E000FF03F807F03FC00003F807F007E000FF03F807F03FC00003F807F007E000FF03F807F03FC03F03F807F007E000FF03F807F03FC07F03F807F007E000FF03FC07F03FC07F03FC07F007E000FF03FC0FF03FC07F03FC07F007E000FF03FFFFF03FFFFF03FFFFF007E000FF03FFFFF03FFFFF03FFFFF007E000FF03FFFFF03FFFFF03FFFFF007E000FF01FFFFF03FFFFF01FFFFF007E000FF01FFFFE03FFFFF00FFFFE007E000FF00FFFFC03FFFFF00FFFFC007E000FF003FFF803FFFFF003FFF0007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00CCC0F81F019819983F00C03E007E00CCC0F81F81B819983F01E03F007E00CCC0CC1981B019983001E033007E00CEC0881981E01B903001E033007E005EC08C1981E01BD03E01A033007E007F808C1F81E00FF03E01303F007E0073808C1F81E00EF03803303F007E007380881B01B00E703003F036007E007380DC1981B00E7038033033007E007380F81981980E703F061833007E00210000080108042010020000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007E00000000000000000000000000007FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF';
+
+  z += '^FWR';
+  z += '^PW812';
+  z += '^LL406';
+  z += '^LH0,0';
+
+  // 1620 logo image (~120x85 dots, top of label)
+  z += '^FO330,10^XGE:LOGO.GRF,1,1^FS';
+
+  // Order # and date (top right)
+  z += '^CF0,18^FO348,152^FD'+o.order+'^FS';
+  z += '^CF0,15^FO370,152^FD'+dateLine+'^FS';
+
+  // Divider
+  z += '^FO392,8^GB2,396,2^FS';
+
+  // Custom hemmed for
+  z += '^CF0,22^FO396,10^FD'+customerLine+'^FS';
+
+  // Divider
+  z += '^FO422,8^GB2,396,2^FS';
+
+  // Style name, style#, color
+  z += '^CF0,19^FO426,10^FD'+o.styleName+'^FS';
+  z += '^CF0,15^FO448,10^FDStyle #: '+o.styleNum+'^FS';
+  z += '^CF0,15^FO448,200^FDColor: '+o.color+'^FS';
+
+  // Divider
+  z += '^FO468,8^GB2,396,2^FS';
+
+  // Waist + Inseam big
+  z += '^CF0,15^FO472,10^FDWAIST^FS';
+  z += '^CF0,80^FO480,14^FD'+o.waist+'"^FS';
+  z += '^CF0,15^FO472,210^FDHEM TO^FS';
+  z += '^CF0,80^FO480,214^FD'+o.inseam+'"^FS';
+
+  // Divider
+  z += '^FO564,8^GB2,396,2^FS';
+
+  // Barcode
+  z += '^BY2,3,55^FO570,30^BCR,55,Y,N,N^FD'+o.order+'^FS';
+
+  z += '^XZ';
+  return z;
 }
 
 // ── SKIP ──
