@@ -195,6 +195,7 @@ select.col-select{flex:1;background:var(--bg);border:1.5px solid var(--border);b
         <div class="col-map-row"><div class="col-map-field">Barcode</div><select class="col-select" id="map-barcode" onchange="checkReady()"></select></div>
         <div class="col-map-row"><div class="col-map-field">Customer</div><select class="col-select" id="map-customer" onchange="checkReady()"></select></div>
         <div class="col-map-row"><div class="col-map-field">Order Date</div><select class="col-select" id="map-order-date" onchange="checkReady()"></select></div>
+        <div class="col-map-row"><div class="col-map-field">Quantity</div><select class="col-select" id="map-quantity" onchange="checkReady()"></select></div>
       </div>
       <button class="btn-primary" id="btn-start" disabled onclick="startSession()">Start Picking Session →</button>
     </div>
@@ -374,7 +375,8 @@ var ALIASES={
   'map-inseam':      ['inseam','hem','inseam_length','hem_length','option3'],
   'map-barcode':     ['barcode','upc','barcode_number'],
   'map-customer':    ['customer_name','customer','ship_to','shipping_name','recipient','billing_name'],
-  'map-order-date':  ['order_date','date','order date','created_at','created at','ordered_at']
+  'map-order-date':  ['order_date','date','order date','created_at','created at','ordered_at'],
+  'map-quantity':    ['quantity','qty','count','item_count','total_qty']
 };
 
 function buildColMap(headers){
@@ -426,7 +428,8 @@ function startSession(){
     inseam:    document.getElementById('map-inseam').value,
     barcode:   document.getElementById('map-barcode').value,
     customer:  document.getElementById('map-customer').value,
-    orderDate: document.getElementById('map-order-date').value
+    orderDate: document.getElementById('map-order-date').value,
+    quantity:  document.getElementById('map-quantity').value
   };
   orders=rawRows.map(function(row,i){
     var cw=resolveColorWaist(row);
@@ -441,6 +444,7 @@ function startSession(){
       barcode:   colMap.barcode?(row[colMap.barcode]||''):'',
       customer:  colMap.customer?(row[colMap.customer]||''):'',
       orderDate: colMap.orderDate?(row[colMap.orderDate]||''):'',
+      quantity:  colMap.quantity?(row[colMap.quantity]||''):'',,
       status:    'pending'
     };
   }).sort(function(a,b){
@@ -647,59 +651,52 @@ function sendToPrinter(o){
 function buildZPL(o){
   var customerLine = o.customer ? 'Custom Hemmed For : '+o.customer : 'Custom Hemmed For :';
   var dateLine = o.orderDate || '';
-  var styleStr = 'Style: '+o.styleNum;
-  var colorStr = 'Color : '+o.color;
   var waistStr = o.waist+'"';
   var hemStr   = o.inseam+'"';
-  var styleNameStr = o.styleName;
-  var orderStr = o.order;
+  var styleStr = 'Style: '+o.styleNum;
+  var colorStr = 'Color : '+o.color;
+  var qtyStr   = o.quantity ? String(o.quantity) : '';
 
-  var z = '';
-  // Printer setup from PRN
-  z += '~TA000~JSN^LT0^MNW^MTD^PON^PMN^LH0,0^JMA^PR5,5~SD10^JUS^LRN^CI27^PA0,1,1,0';
-  z += '^XA';
+  var z = '~TA000~JSN^LT0^MNW^MTD^PON^PMN^LH0,0^JMA^PR5,5~SD10^JUS^LRN^CI27^PA0,1,1,0';
+  z += '^XA^MMT^PW812^LL406^LS0';
+
+  // Static graphics (logo, dividers, label elements from V2 PRN)
   z += '^MMT';
   z += '^PW812';
   z += '^LL406';
   z += '^LS0';
-
-  // Logo
-  z += '^FO25,136^^GFA,797,1632,12,:Z64:eJyVVcGO0zAQHTe7SgVScuRGe+cjsh9B7/6E/kEsDhCJar+hxyorde8c2CLxD5yq9THisJRTIzbYzIzt2KyIAEurfXp6Gr95mXFrOx5TT+CuGc/1GsZTyASnvJ7gf9dfrlar14w7uKN7NDTIC77zJAZZyIxxL251sXZ4EO+wvsfwRhXr3PNfroLeZFYTfzwe7we4uCq6sp/P588N35v3+E8wlglOeV0SBs+fnugzxNuov9Sx/h3x9nw+WyO+K9Q7P0InPn+q6D/pC0TsF2A55uDyYdy53BaE/y1/tR15oeSozzbLyG8k1p83Df6JDekrNLMYBGYo8V4DlYFHzX4MLFw+6NMoh9m/59l/4POIu5JwGfhVfXgx5llpzLN1+VdaGGEPnD9heK+ZX5wQ54dCIl/2qP/g9OWA+p7qE4+avWI+H0iP/nOzy8yNgRueh55su/oOw46/S8+tOf89eLxOMOYfecK110OFRgP/l/w/6fi9HlXUv6T6/uwTvXX6WdtuoXV8STvi61c8J+7egOUTvqa5AlffBv8XzPv8FdivtwYMze0BrMqMuNecP2G/X1DjnIu3qC/tlvhsz3N+ssRbmn/7wyrMvPFzHvaF5yELuY1Y074/fPM8L4bPczbiNdtE//i9Om4d+3rQxOf8Jvh5dngZ+tXis+R8nrUtNqdjzqvpfekm+Cm9xuJ0/Py4HUef4f2BV3rkaW67wJtEf4Ko/6jCO8BziyvBh+c2G/w80PtmnIMdjDz7Dzz5FJGXs/bP/v+z3/T9n/qNSHGTnF8HtnEW:4E12^FS';
-
-  // Vertical dividers
-  z += '^FO141,5^GB0,395,8^FS';
-  z += '^FO296,5^GB0,395,8^FS';
-  z += '^FO471,5^GB0,395,8^FS';
-  z += '^FO560,5^GB0,395,8^FS';
-  z += '^FO692,0^GB0,400,8^FS';
-
-  // Waist (big) + label
-  z += '^FT235,358^A0B,86,86^FH\^CI28^FD'+waistStr+'^FS^CI27';
-  z += '^FT280,343^A0B,28,28^FH\^CI28^FDWaist^FS^CI27';
-
-  // Hem To (big) + label  
-  z += '^FT239,150^A0B,86,86^FH\^CI28^FD'+hemStr+'^FS^CI27';
-  z += '^FT280,137^A0B,28,28^FH\^CI28^FDHem To^FS^CI27';
-
-  // Style # and Color
-  z += '^FT337,339^A0B,21,38^FH\^CI28^FD'+styleStr+'^FS^CI27';
-  z += '^FT378,372^A0B,28,41^FH\^CI28^FD'+colorStr+'^FS^CI27';
-
-  // Custom hemmed for
-  z += '^FT543,372^A0B,49,18^FH\^CI28^FD'+customerLine+'^FS^CI27';
-
-  // Date and Order #
-  z += '^FT626,257^A0B,28,28^FH\^CI28^FD'+dateLine+'^FS^CI27';
-  z += '^FT661,257^A0B,28,28^FH\^CI28^FD'+orderStr+'^FS^CI27';
-
-  // Style name
-  z += '^FT458,388^A0B,67,30^FH\^CI28^FD'+styleNameStr+'^FS^CI27';
-
-  // Barcode
-  z += '^BY2,3,41^FT762,293^BCB,,Y,N^FH\^FD>;'+orderStr+'^FS';
-
+  z += '^FO14,133^GFA,797,1632,12,:Z64:eJyVVcGO0zAQHTe7SgVScuRGe+cjsh9B7/6E/kEsDhCJar+hxyorde8c2CLxD5yq9THisJRTIzbYzIzt2KyIAEurfXp6Gr95mXFrOx5TT+CuGc/1GsZTyASnvJ7gf9dfrlar14w7uKN7NDTIC77zJAZZyIxxL251sXZ4EO+wvsfwRhXr3PNfroLeZFYTfzwe7we4uCq6sp/P588N35v3+E8wlglOeV0SBs+fnugzxNuov9Sx/h3x9nw+WyO+K9Q7P0InPn+q6D/pC0TsF2A55uDyYdy53BaE/y1/tR15oeSozzbLyG8k1p83Df6JDekrNLMYBGYo8V4DlYFHzX4MLFw+6NMoh9m/59l/4POIu5JwGfhVfXgx5llpzLN1+VdaGGEPnD9heK+ZX5wQ54dCIl/2qP/g9OWA+p7qE4+avWI+H0iP/nOzy8yNgRueh55su/oOw46/S8+tOf89eLxOMOYfecK110OFRgP/l/w/6fi9HlXUv6T6/uwTvXX6WdtuoXV8STvi61c8J+7egOUTvqa5AlffBv8XzPv8FdivtwYMze0BrMqMuNecP2G/X1DjnIu3qC/tlvhsz3N+ssRbmn/7wyrMvPFzHvaF5yELuY1Y074/fPM8L4bPczbiNdtE//i9Om4d+3rQxOf8Jvh5dngZ+tXis+R8nrUtNqdjzqvpfekm+Cm9xuJ0/Py4HUef4f2BV3rkaW67wJtEf4Ko/6jCO8BziyvBh+c2G/w80PtmnIMdjDz7Dzz5FJGXs/bP/v+z3/T9n/qNSHGTnF8HtnEW:4E12';
+  z += '^FO180,5^GB0,395,3^FS';
+  z += '^FO190,255^GFA,305,952,8,:Z64:eJzF0sFtBCEMBVAQB46UQCmUBqWRCtIC6cBHIs3i/dieaLSXzUaR1hrpXQZsPqTmpBIfJv/Rqdp+v63z/3f1v5bn10X/XfTfRu5iYNJ+yEesS83cxMRdjEyi56nz8VILq5k/xMhfYuBvPQff1GpR5odog+lNd1rMbEYzmO70Wf2sG+g69S6xed5vonIrvHbTXtAYQwwM2jAUwQ4ncupRHfDYYvjbReT6idUQqSxXKR870UJ5ujpdnrCIdDVt8b3gVNOjxzZvd2IUl8lXC4VlynMuw5NczfBddU0C63eQXEg8:DA50';
+  z += '^FO396,136^GFA,829,1680,7,:Z64:eJydlD1u3DAQhUeRAboIVildCOIVNh2LRXQVH0Eli4WXPkmukVQmkMKljxACKVKG6RQkMTNvhlprswsECJtvFxrOm58nNSURn1ZhTkF0jjYImosXFKfnql6PillRwioLWUWrOKRVyHKhZsnr6zVyuadZjpWdXI/rWpZzV1uRyLbEI2w094n6MRliHLJgPwsmJ88mh8hBsXEeWbrPGTlNyZpJyyphKT68wMSWdcxTIo7qvmWMzhbBsPdA7xyiz7EhGsjZMfAvPz5Eek3TqMUfvidsaEpH2DJfxAGybQDMJ0HzRUA/tcpRYcO69Lr8enSo6IEP9yDx3AMDPQQptwLdonhtTNokAfcAcA+rzP3fwFJ7HWkF94AVA2+jYJsWcIhxige98F7wykbJ2b20YaUH3rTgkEuRTQsmV/H7a5BN38um4QLeNGCKgOuBJ7Dp5XWKK2dVn60O10le0PyQ4tuZB8LFMzotnucG8NyARv81/OzjWgFgFQhBmoW6khcF7IH8ViboXIPenSdM3k+kZkArJU/SSgI4k29EYacYu8hrd5aFTHYdXD4788wKvxzdssI7NWanMB8Erao3gg1VeOCKXJ1CS2ogHh0rAKwAsAKeQYH+T+HCG0eYpZx/fbriVpaX/II7gWwzbtffCS0ekHkGRVJkPGNopFc49YRTT9RJnMIX/RacICkCnZ03dI1kN3SD1L0KDTQDtp1lno9JbRqNrFjKpWctfq+t9AI4Ut8q5KwmquCzrYU20ju8dN1G2GbTiXuGTrzUW3FWPzh4qd+5nQJeGrx4yc7qpezhJcO3b3nIYfoDKM6qwQ==:A2DE';
+  z += '^FO480,5^GB0,397,3^FS';
+  z += '^FO512,108^GFA,861,1960,7,:Z64:eJyNlT1u3DAQhYdhwa2iNoUgXiGlCgN7lRxBpSpLRg6Q87gT4IswVVq5k2FkmZn3qF1p5QQRYHxYiPPDefNkEZFaWjG0/4uYl7/i9niZDOEprdAjBfbuLnyUYJgljBp7AWSYvCWpFsmaxS3BIEQgBqT3GTUje4ga9CjSDIvLI+rlaYO1JdngRPR453FSswF5tixB/zRnfB9R4TtQ+7GzXy9j1+GdQU8aNA6IC+AJ6Qfc4UTIBv8cqyPCfL2gRXHSF86bJ6ok2ZKNgI4gM/XvX5zEE0ewvTtQUyNDBuzuCru7Anc/dNYD7g0n/cLwgvYeQpz8FJ6TfK6SVWiqGYUipKqb1grVD1w3oum5dUvrtLNq7r0ipM76dGPHncD2QEYMOXAifkSgS5ADcXk0qFQWpzLanqmMgTIC74CdHIXyJ8uCQr7sYE+cZPu0eyBOWk+EPTjBPayezTNRUF6sYL3mKLfb3sHznYN+KKSG3QNjPeAmozWx0KkFN+GOeE5HcxXHYV/YT+TOeq6peho7Xy0DPU0HEGHBQqqnEz2d6OnElU/wNH7lFcU5RztdxelZvnwaiDxzpujw4Gn8elnfudvaaFzYLwMr7JbvqgMb9DltEArsiGN4mIE4AQPDL5BRm7aAKgH2jaSncf7gxsciP8oX+xas1pZ7bL7JBxmL7Wve6oZNuBDmaYGnz9ZgNRvU09GqN7p8MLOXDzz9SUdhnv4xiXk60tORqR8gI9fti22kn/ow6zTmxb/qXN4W93OSiqI3Z+oX2WfND9kOEID76cp/oLQCD8vuHVf+aZS4w+T1+Uq0mtO2gePpBGU/RO+AB+JcoUJkoYqFwoUVviH1HypFHtc=:B648';
+  z += '^FO600,5^GB0,395,3^FS';
+  z += '^FO611,132^GFA,657,2048,8,:Z64:eJztk7FqIzEQhsfosFwEbXvFYecxUmVfJXDga3Odj0BkyIsFUqT0K6xxkdbHNS6W7M2v+cex1zZJIKSKQHxrSxrNP/NL5FnKWHbGlfNxbrzb52/yz8JYc/+EcWIrR8c42P7sfDB2K+Pyn7G5IWtyYryuyGg8Z5z+qDbGmvlk5rfh+SYcp6/7fj/v8T5bj/9ak17WzIVJYwy+wLyF8WUbbz/uV3244UR9vl8abzPjkV1n+1bUsTzBv+Q1419F+dBRsR59DsP7Y7mmXQ4azV2/45PIBaj9+qFMP41nyhEpO0y/mA/rHMlAn8gJnyStEzT0mTUXaMrMzX1XMd7wFW2hszyjsmJelWpLU2ULPSIDXYMuqRtj2EiCgepWovoxdJfyrYbHkxoa55PlIEbED/fMa2Na8C7ATM4q07CORrwnaAGhBYQWf2dHejJY6LdTh/PkSIzVZ2ZNwMSaJtY0sqb+LCLvqHYY+H2whqQaiwXfFK5MF+oKi8In2N/nW3xzeC91TrWFpYfOuVOiXo5ewkPoJWqAXpZajHfezzb2y734b9Duax9RaOl8cM5L3cBSN41Z/LaddtY9e2yExuakxRwV/9TPF6U3uZsV/8zUXOsID62LTxo9YDyctm/Oc8I4wrh+z/be/6bKSVc=:B9A5';
+  z += '^FO345,30^GFA,497,1380,4,:Z64:eJytlD1OAzEQhd/iSNOxnIDlCNCliLQcJR1tyi1Q4lQcg3NQMUfxEdIRpCjmjZ0fZ0USEjGrT9rd8Rt7xmPLGmiiRxsVsxjQVQETZOzd/pnPxgjH7k0B+nfY98ZuqW2UukD9gnGWjDci96TmtwQMHaHuDgHnTDimpI2ZhuuSCLje+Io+R2RLipFxPvuloG9bfY7BvJ84z2PIDMknfe8BNw1zrv1OZ68Nw7WLTNcBk+EhVs+SczawdTOuMJ7Vv2LOKbiskJJvI9f55mXlvCyId35wZd1e6Psq6Fvkv5K+ndJfupbZ2mrliSZyj/1C6lHd4JPuT8a9qb4Vjr0py82+lnzY/muiYlxM/0mL6/vzGQ8Y85kw547n55VnqW086pjbwS2pZWvw8F7cZ/+R18n+mCJpXNpvxpof9oObKzX+ZH/JQV2sUIqyF/Y+zf4j86c19Oa376O5jfPZszqnu7JWjJzyftTdXVnSr/0PVst0Bg==:369C';
+  z += '^FO316,5^GB0,395,3^FS';
+  z += '^BY2,3,51^FT769,295^BCB,,Y,N';
+  z += '^FH\\^FD'+o.order+'^FS';
+  z += '^FO694,0^GB0,400,3^FS';
+  z += '^FO284,299^GFA,209,234,3,:Z64:eJxNjTEKAjEQRf8nheW2FoG9gnZbiLmSrWDjPTyKxYKwW3qFhQVtU6YYdpwkBBxe9efPG46ejU6lkHYaOQJGnfuCNdGYhfODs+fbUz03D0NOGIZWxQG4qlSOKvifINAMNfFz4bTn5DMm/D6xCl4CJmCpnmBEBEWvMR92ZrvBiXmcRstte24dS7LflU6Xv/StE4rtBxmEVzM=:106D';
+  z += '^FO193,44^GFA,369,952,8,:Z64:eJzF0sFtxiAMBWCjHHKkG7BGbyxWCTYrG3QFRuDIgcZ9z6ZVVPXQ/peiSJ8iBWM/EqvYirq2+qDT3fV+uz6//6/zf155fBmWG7WZWYdZeCBUvWhQNpLHASs8Yd+O7YToF5O6l4mdMOFFK1yStJmnOeXQbgYdpuh0y3Lz5Sa1fWj11cSZI8KDosuwFcrYiqIvjkcrC6D/xgKwswDmaiyAOYUFhnC/wBdahjzvnJ5oGg/F7VcodmacfpdZ0c5ijzUzYkUaSAoz9IKIORNscCLKdrodLop8329i3jfs5vwB1QrzsXtAbmVKmjCb426keP7gdON3F03Ucjqvrd7F/3Nt7XfOPViipYfmSrXA2gc2LEfv:E91E';
+  z += '^FO284,65^GFA,201,297,3,:Z64:eJx1jz0OwjAMhd87QVeGHCRDpVyJka1wD47CUAmpGblCpEp0zZjBIjhR6Y8A65v8np9tOEEuUIlgP4MARKD7SErYqydwkTRhW2tm4vPI4cDBFLzhdMMouAuYakqtRhdZ5BZZDdW2MGkzFboIF9Cc55FLwJioeKG/FufDUMdfBoq0sPbXPV8//v/CZdnyBoxgcOM=:6E96';
+  z += '^FO143,141^GFA,281,339,3,:Z64:eJxVjzFqAzEQRf+iYtPpAoN1jSkGdKWULhasIpBL+DCTymUukGLDFi6tUsbCyqwWFufzCs3Xg5EwKDqx1Z0w6Pil7ldxV5wUQeEVrpuWYfaXHC4l3Ep8Ck/EQnwkO9hopWGCadji1H/m8N39VmUSZtoRJoLBWOkZE8LMMXMsfCp8FH6njZg3xC5334H8TCFTqPYA4kjszzz+sKsyVEI9YCLIGwj/8/pl4wD4vtwZr96SDFlSNFpyraBVLDUuH/Fhja7j1Zrzarr0B/8BdwI=:8216';
+  z += '^FO128,5^GB0,395,3^FS';
   z += '^PQ1,0,1,Y';
-  z += '^XZ';
+
+  // Dynamic text fields
+  z += '^FT235,358^A0B,86,86^FH\\^CI28^FD'+waistStr+'^FS^CI27';
+  z += '^FT239,150^A0B,86,86^FH\\^CI28^FD'+hemStr+'^FS^CI27';
+  z += '^FT337,339^A0B,21,38^FH\\^CI28^FD'+styleStr+'^FS^CI27';
+  z += '^FT378,372^A0B,28,41^FH\\^CI28^FD'+colorStr+'^FS^CI27';
+  z += '^FT543,372^A0B,49,18^FH\\^CI28^FD'+customerLine+'^FS^CI27';
+  z += '^FT626,257^A0B,28,28^FH\\^CI28^FD'+dateLine+'^FS^CI27';
+  z += '^FT661,257^A0B,28,28^FH\\^CI28^FD'+o.order+'^FS^CI27';
+  z += '^FT458,388^A0B,67,30^FH\\^CI28^FD'+o.styleName+'^FS^CI27';
+  z += '^FT155,350^A0B,28,28^FH\\^CI28^FD'+qtyStr+'^FS^CI27';
+
+  z += '^PQ1,0,1,Y^XZ';
   return z;
 }
 
