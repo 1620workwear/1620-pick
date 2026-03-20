@@ -444,7 +444,7 @@ function startSession(){
       barcode:   colMap.barcode?(row[colMap.barcode]||''):'',
       customer:  colMap.customer?(row[colMap.customer]||''):'',
       orderDate: colMap.orderDate?(row[colMap.orderDate]||''):'',
-      quantity:  colMap.quantity?(row[colMap.quantity]||''):'',,
+      quantity:  colMap.quantity?(row[colMap.quantity]||''):'',
       status:    'pending'
     };
   }).sort(function(a,b){
@@ -650,17 +650,18 @@ function sendToPrinter(o){
 
 function buildZPL(o){
   var customerLine = o.customer ? 'Custom Hemmed For : '+o.customer : 'Custom Hemmed For :';
-  var dateLine = o.orderDate || '';
-  var waistStr = o.waist+'"';
-  var hemStr   = o.inseam+'"';
-  var styleStr = 'Style: '+o.styleNum;
-  var colorStr = 'Color : '+o.color;
-  var qtyStr   = o.quantity ? String(o.quantity) : '';
+  var dateLine  = o.orderDate || '';
+  var waistStr  = o.waist+'"';
+  var hemStr    = o.inseam+'"';
+  var styleStr  = 'Style: '+o.styleNum;
+  var colorStr  = 'Color : '+o.color;
+  var qtyStr    = o.quantity || '';
 
+  // Printer init
   var z = '~TA000~JSN^LT0^MNW^MTD^PON^PMN^LH0,0^JMA^PR5,5~SD10^JUS^LRN^CI27^PA0,1,1,0';
   z += '^XA^MMT^PW812^LL406^LS0';
 
-  // Static graphics (logo, dividers, label elements from V2 PRN)
+  // Static graphics from V3 PRN (logo, dividers, label elements)
   z += '^MMT';
   z += '^PW812';
   z += '^LL406';
@@ -676,7 +677,7 @@ function buildZPL(o){
   z += '^FO345,30^GFA,497,1380,4,:Z64:eJytlD1OAzEQhd/iSNOxnIDlCNCliLQcJR1tyi1Q4lQcg3NQMUfxEdIRpCjmjZ0fZ0USEjGrT9rd8Rt7xmPLGmiiRxsVsxjQVQETZOzd/pnPxgjH7k0B+nfY98ZuqW2UukD9gnGWjDci96TmtwQMHaHuDgHnTDimpI2ZhuuSCLje+Io+R2RLipFxPvuloG9bfY7BvJ84z2PIDMknfe8BNw1zrv1OZ68Nw7WLTNcBk+EhVs+SczawdTOuMJ7Vv2LOKbiskJJvI9f55mXlvCyId35wZd1e6Psq6Fvkv5K+ndJfupbZ2mrliSZyj/1C6lHd4JPuT8a9qb4Vjr0py82+lnzY/muiYlxM/0mL6/vzGQ8Y85kw547n55VnqW086pjbwS2pZWvw8F7cZ/+R18n+mCJpXNpvxpof9oObKzX+ZH/JQV2sUIqyF/Y+zf4j86c19Oa376O5jfPZszqnu7JWjJzyftTdXVnSr/0PVst0Bg==:369C';
   z += '^FO316,5^GB0,395,3^FS';
   z += '^BY2,3,51^FT769,295^BCB,,Y,N';
-  z += '^FH\\^FD'+o.order+'^FS';
+  z += '^FH\^FD'+o.order+'^FS';
   z += '^FO694,0^GB0,400,3^FS';
   z += '^FO284,299^GFA,209,234,3,:Z64:eJxNjTEKAjEQRf8nheW2FoG9gnZbiLmSrWDjPTyKxYKwW3qFhQVtU6YYdpwkBBxe9efPG46ejU6lkHYaOQJGnfuCNdGYhfODs+fbUz03D0NOGIZWxQG4qlSOKvifINAMNfFz4bTn5DMm/D6xCl4CJmCpnmBEBEWvMR92ZrvBiXmcRstte24dS7LflU6Xv/StE4rtBxmEVzM=:106D';
   z += '^FO193,44^GFA,369,952,8,:Z64:eJzF0sFtxiAMBWCjHHKkG7BGbyxWCTYrG3QFRuDIgcZ9z6ZVVPXQ/peiSJ8iBWM/EqvYirq2+qDT3fV+uz6//6/zf155fBmWG7WZWYdZeCBUvWhQNpLHASs8Yd+O7YToF5O6l4mdMOFFK1yStJmnOeXQbgYdpuh0y3Lz5Sa1fWj11cSZI8KDosuwFcrYiqIvjkcrC6D/xgKwswDmaiyAOYUFhnC/wBdahjzvnJ5oGg/F7VcodmacfpdZ0c5ijzUzYkUaSAoz9IKIORNscCLKdrodLop8329i3jfs5vwB1QrzsXtAbmVKmjCb426keP7gdON3F03Ucjqvrd7F/3Nt7XfOPViipYfmSrXA2gc2LEfv:E91E';
@@ -685,16 +686,16 @@ function buildZPL(o){
   z += '^FO128,5^GB0,395,3^FS';
   z += '^PQ1,0,1,Y';
 
-  // Dynamic text fields
-  z += '^FT235,358^A0B,86,86^FH\\^CI28^FD'+waistStr+'^FS^CI27';
-  z += '^FT239,150^A0B,86,86^FH\\^CI28^FD'+hemStr+'^FS^CI27';
-  z += '^FT337,339^A0B,21,38^FH\\^CI28^FD'+styleStr+'^FS^CI27';
-  z += '^FT378,372^A0B,28,41^FH\\^CI28^FD'+colorStr+'^FS^CI27';
-  z += '^FT543,372^A0B,49,18^FH\\^CI28^FD'+customerLine+'^FS^CI27';
-  z += '^FT626,257^A0B,28,28^FH\\^CI28^FD'+dateLine+'^FS^CI27';
-  z += '^FT661,257^A0B,28,28^FH\\^CI28^FD'+o.order+'^FS^CI27';
-  z += '^FT458,388^A0B,67,30^FH\\^CI28^FD'+o.styleName+'^FS^CI27';
-  z += '^FT155,350^A0B,28,28^FH\\^CI28^FD'+qtyStr+'^FS^CI27';
+  // Dynamic text fields (^A0B = bottom-to-top font orientation)
+  z += '^FT235,358^A0B,86,86^FH\^CI28^FD'+waistStr+'^FS^CI27';
+  z += '^FT239,150^A0B,86,86^FH\^CI28^FD'+hemStr+'^FS^CI27';
+  z += '^FT337,339^A0B,21,38^FH\^CI28^FD'+styleStr+'^FS^CI27';
+  z += '^FT378,372^A0B,28,41^FH\^CI28^FD'+colorStr+'^FS^CI27';
+  z += '^FT543,372^A0B,49,18^FH\^CI28^FD'+customerLine+'^FS^CI27';
+  z += '^FT626,257^A0B,28,28^FH\^CI28^FD'+dateLine+'^FS^CI27';
+  z += '^FT661,257^A0B,28,28^FH\^CI28^FD'+o.order+'^FS^CI27';
+  z += '^FT458,388^A0B,67,30^FH\^CI28^FD'+o.styleName+'^FS^CI27';
+  z += '^FT155,350^A0B,28,28^FH\^CI28^FD'+qtyStr+'^FS^CI27';
 
   z += '^PQ1,0,1,Y^XZ';
   return z;
