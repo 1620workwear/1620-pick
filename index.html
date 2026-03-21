@@ -652,9 +652,8 @@ function buildZPL(o){
   var dateLine  = o.orderDate || '';
   var waistStr  = o.waist+'"';
   var hemStr    = o.inseam+'"';
-  var styleStr  = 'SKU: '+o.styleNum;
   var colorStr  = 'Color : '+o.color;
-  var custLabel = 'Custom Hemmed For:';
+  var skuStr    = 'SKU: '+o.styleNum;
   var custName  = o.customer || '';
   var qtyStr    = 'Quantity : '+(o.quantity || '');
   var dateStr   = 'Order Date : '+dateLine;
@@ -662,67 +661,52 @@ function buildZPL(o){
   var z = '~TA000~JSN^LT0^MNW^MTD^PON^PMN^LH0,0^JMA^PR5,5~SD10^JUS^LRN^CI27^PA0,1,1,0';
   z += '^XA^MMT^PW812^LL406^LS0';
 
-  // Logo
   z += '^FO14,133^GFA,797,1632,12,:Z64:eJyVVcGO0zAQHTe7SgVScuRGe+cjsh9B7/6E/kEsDhCJar+hxyorde8c2CLxD5yq9THisJRTIzbYzIzt2KyIAEurfXp6Gr95mXFrOx5TT+CuGc/1GsZTyASnvJ7gf9dfrlar14w7uKN7NDTIC77zJAZZyIxxL251sXZ4EO+wvsfwRhXr3PNfroLeZFYTfzwe7we4uCq6sp/P588N35v3+E8wlglOeV0SBs+fnugzxNuov9Sx/h3x9nw+WyO+K9Q7P0InPn+q6D/pC0TsF2A55uDyYdy53BaE/y1/tR15oeSozzbLyG8k1p83Df6JDekrNLMYBGYo8V4DlYFHzX4MLFw+6NMoh9m/59l/4POIu5JwGfhVfXgx5llpzLN1+VdaGGEPnD9heK+ZX5wQ54dCIl/2qP/g9OWA+p7qE4+avWI+H0iP/nOzy8yNgRueh55su/oOw46/S8+tOf89eLxOMOYfecK110OFRgP/l/w/6fi9HlXUv6T6/uwTvXX6WdtuoXV8STvi61c8J+7egOUTvqa5AlffBv8XzPv8FdivtwYMze0BrMqMuNecP2G/X1DjnIu3qC/tlvhsz3N+ssRbmn/7wyrMvPFzHvaF5yELuY1Y074/fPM8L4bPczbiNdtE//i9Om4d+3rQxOf8Jvh5dngZ+tXis+R8nrUtNqdjzqvpfekm+Cm9xuJ0/Py4HUef4f2BV3rkaW67wJtEf4Ko/6jCO8BziyvBh+c2G/w80PtmnIMdjDz7Dzz5FJGXs/bP/v+z3/T9n/qNSHGTnF8HtnEW:4E12';
-  z += '^FO180,5^GB0,395,3^FS';
-  z += '^FO480,5^GB0,397,3^FS';
-  z += '^FO600,5^GB0,395,3^FS';
-  z += '^FO316,5^GB0,395,3^FS';
-  z += '^FO694,0^GB0,400,3^FS';
-  z += '^FO128,5^GB0,395,3^FS';
 
-  // Order # — just below logo, centered
-  z += '^FT190,257^A0B,28,28^FH\^CI28^FD'+o.order+'^FS^CI27';
+  // Order# x=147-175, gap from logo(134)=13
+  z += '^FT175,257^A0B,28,28^FH\^CI28^FD'+o.order+'^FS^CI27';
+  // div1 at x=186, gap=11
+  z += '^FO186,5^GB0,395,3^FS';
 
-  // Divider
-  z += '^FO210,5^GB0,395,3^FS';
+  // Waist/Hem numbers x=198-284, gap from div1=12
+  z += '^FT284,345^A0B,86,86^FH\^CI28^FD'+waistStr+'^FS^CI27';
+  z += '^FT284,140^A0B,86,86^FH\^CI28^FD'+hemStr+'^FS^CI27';
+  // Waist/Inseam labels x=272-296 (different y, no conflict with numbers)
+  z += '^FT296,345^A0B,24,24^FH\^CI28^FDWaist^FS^CI27';
+  z += '^FT296,130^A0B,24,24^FH\^CI28^FDInseam^FS^CI27';
+  // div2 at x=308, gap from max(284,296)=12
+  z += '^FO308,5^GB0,395,3^FS';
 
-  // Waist (big, left) and Hem (big, right)
-  z += '^FT235,345^A0B,86,86^FH\^CI28^FD'+waistStr+'^FS^CI27';
-  z += '^FT235,140^A0B,86,86^FH\^CI28^FD'+hemStr+'^FS^CI27';
+  // Style name x=310-348, gap from div2=2 — pushed to x=316-354
+  z += '^FT354,388^A0B,38,30^FH\^CI28^FD'+o.styleName+'^FS^CI27';
+  // Color x=328-354... wait overlap with style end(354)
+  // Style ends 354, color FT(364): 338-364, gap=10 ✅
+  z += '^FT368,388^A0B,26,26^FH\^CI28^FD'+colorStr+'^FS^CI27';
+  // SKU: color ends 368, FT(394): 370-394, gap=2 — move to FT(400): 376-400, gap=8 ✅
+  z += '^FT400,388^A0B,24,24^FH\^CI28^FD'+skuStr+'^FS^CI27';
+  // div3 at x=412, gap=12
+  z += '^FO412,5^GB0,395,3^FS';
 
-  // Waist / Inseam labels
-  z += '^FT300,345^A0B,28,28^FH\^CI28^FDWaist^FS^CI27';
-  z += '^FT300,130^A0B,28,28^FH\^CI28^FDInseam^FS^CI27';
+  // Custom Hemmed For: FT(434): 412-434... tight, move to FT(436): 414-436, gap=2
+  // safer: FT(442): 420-442, gap=8
+  z += '^FT442,388^A0B,22,22^FH\^CI28^FDCustom Hemmed For:^FS^CI27';
+  // Customer name FT(474): 446-474, gap=4 ✅
+  z += '^FT474,388^A0B,28,28^FH\^CI28^FD'+custName+'^FS^CI27';
+  // div4 at x=486, gap=12
+  z += '^FO486,5^GB0,395,3^FS';
 
-  // Divider
-  z += '^FO316,5^GB0,395,3^FS';
+  // Order Date FT(510): 488-510... 488<486? No 488>486 ✅ gap=2, move to FT(516): 494-516, gap=8
+  z += '^FT516,388^A0B,22,22^FH\^CI28^FD'+dateStr+'^FS^CI27';
+  // Quantity FT(540): 518-540, gap=2 — move to FT(542): 520-542, gap=4 ✅
+  z += '^FT542,388^A0B,22,22^FH\^CI28^FD'+qtyStr+'^FS^CI27';
+  // div5 at x=554, gap=12
+  z += '^FO554,5^GB0,395,3^FS';
 
-  // Style name (larger font)
-  z += '^FT340,388^A0B,40,30^FH\^CI28^FD'+o.styleName+'^FS^CI27';
-
-  // Color
-  z += '^FT380,388^A0B,28,28^FH\^CI28^FD'+colorStr+'^FS^CI27';
-
-  // SKU
-  z += '^FT408,388^A0B,24,24^FH\^CI28^FD'+styleStr+'^FS^CI27';
-
-  // Divider
-  z += '^FO435,5^GB0,395,3^FS';
-
-  // Custom Hemmed For: label
-  z += '^FT455,388^A0B,24,24^FH\^CI28^FD'+custLabel+'^FS^CI27';
-
-  // Customer name (own line, larger)
-  z += '^FT485,388^A0B,28,28^FH\^CI28^FD'+custName+'^FS^CI27';
-
-  // Divider
-  z += '^FO515,5^GB0,395,3^FS';
-
-  // Order Date
-  z += '^FT525,388^A0B,24,24^FH\^CI28^FD'+dateStr+'^FS^CI27';
-
-  // Quantity
-  z += '^FT555,388^A0B,24,24^FH\^CI28^FD'+qtyStr+'^FS^CI27';
-
-  // Divider
-  z += '^FO580,5^GB0,395,3^FS';
-
-  // Barcode
+  // Barcode FT(762): 711-762, gap=157 ✅
   z += '^BY2,3,51^FT762,293^BCB,,Y,N';
   z += '^FH\^FD>;'+o.order+'^FS';
+  z += '^FO774,0^GB0,400,3^FS';
 
-  z += '^FO694,0^GB0,400,3^FS';
   z += '^PQ1,0,1,Y^XZ';
   return z;
 }
