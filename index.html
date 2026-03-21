@@ -665,45 +665,43 @@ function buildZPL(o){
 
   // Order # — baseline x=175, occupies 147-175
   z += '^FT175,257^A0B,28,28^FH\^CI28^FD'+o.order+'^FS^CI27';
-  // Divider — x=185 (10 gap after 175)
   z += '^FO185,5^GB0,395,3^FS';
 
-  // Big numbers — baseline x=295, occupies 209-295 (10 gap after div@185)
+  // Big numbers — baseline x=295, occupies 209-295
   z += '^FT295,345^A0B,86,86^FH\^CI28^FD'+waistStr+'^FS^CI27';
   z += '^FT295,140^A0B,86,86^FH\^CI28^FD'+hemStr+'^FS^CI27';
-  // Waist/Inseam labels — baseline x=295 (same line, smaller font)
+  // Waist/Inseam labels — same baseline
   z += '^FT295,370^A0B,24,24^FH\^CI28^FDWaist^FS^CI27';
   z += '^FT295,115^A0B,24,24^FH\^CI28^FDInseam^FS^CI27';
-  // Divider — x=305 (10 gap after 295)
-  z += '^FO305,5^GB0,395,3^FS';
+  // Divider — x=320 (25 dot gap after baseline 295, fixes overlap with style name)
+  z += '^FO320,5^GB0,395,3^FS';
 
-  // Style name — baseline x=363, occupies 325-363 (20 gap after div@305)
+  // Style name — baseline x=363, occupies 325-363 (5 gap after div@320)
   z += '^FT363,388^A0B,38,30^FH\^CI28^FD'+o.styleName+'^FS^CI27';
-  // Color — baseline x=395, occupies 369-395 (6 gap after 363)
+  // Color — baseline x=395
   z += '^FT395,388^A0B,26,26^FH\^CI28^FD'+colorStr+'^FS^CI27';
-  // SKU — baseline x=425, occupies 401-425 (6 gap after 395)
+  // SKU — baseline x=425
   z += '^FT425,388^A0B,24,24^FH\^CI28^FD'+skuStr+'^FS^CI27';
-  // Divider — x=435 (10 gap after 425)
-  z += '^FO435,5^GB0,395,3^FS';
+  z += '^FO438,5^GB0,395,3^FS';
 
-  // Custom Hemmed For — baseline x=467, occupies 445-467 (10 gap after div@435)
-  z += '^FT467,388^A0B,22,22^FH\^CI28^FDCustom Hemmed For:^FS^CI27';
-  // Customer name — baseline x=503, occupies 475-503 (8 gap after 467)
+  // Custom Hemmed For — baseline x=468, occupies 446-468
+  z += '^FT468,388^A0B,22,22^FH\^CI28^FDCustom Hemmed For:^FS^CI27';
+  // Customer name — baseline x=503
   z += '^FT503,388^A0B,28,28^FH\^CI28^FD'+custName+'^FS^CI27';
-  // Divider — x=513 (10 gap after 503)
-  z += '^FO513,5^GB0,395,3^FS';
+  z += '^FO516,5^GB0,395,3^FS';
 
-  // Order Date — baseline x=545, occupies 523-545 (10 gap after div@513)
+  // Order Date — baseline x=545
   z += '^FT545,388^A0B,22,22^FH\^CI28^FD'+dateStr+'^FS^CI27';
-  // Quantity — baseline x=573, occupies 551-573 (6 gap after 545)
+  // Quantity — baseline x=573
   z += '^FT573,388^A0B,22,22^FH\^CI28^FD'+qtyStr+'^FS^CI27';
-  // Divider — x=583 (10 gap after 573)
-  z += '^FO583,5^GB0,395,3^FS';
+  z += '^FO586,5^GB0,395,3^FS';
 
-  // Barcode — FT762, height=51, occupies 711-762
-  z += '^BY2,3,51^FT762,293^BCB,,Y,N';
+  // Barcode — moved up to FT720 (from 762), height increased to 70
+  // occupies x=650-720, order number prints below at ~x=724
+  z += '^BY2,3,70^FT720,293^BCB,,Y,N';
   z += '^FH\^FD>;'+o.order+'^FS';
-  z += '^FO774,0^GB0,400,3^FS';
+  // Final divider after barcode number text (~x=750)
+  z += '^FO760,0^GB0,400,3^FS';
 
   z += '^PQ1,0,1,Y^XZ';
   return z;
